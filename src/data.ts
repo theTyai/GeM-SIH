@@ -5,6 +5,9 @@ export const MOCK_DB: Record<string, AuditData> = {
     id: 'p1',
     name: 'HP ProBook 15 G8 Core i5',
     verdict: 'COMPLIANT',
+    status: 'REVIEW_REQUIRED',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    assignedOfficerId: 'user_1',
     gemPrice: 45200,
     fmv: 46100,
     variance: -2.0,
@@ -51,6 +54,9 @@ export const MOCK_DB: Record<string, AuditData> = {
     id: 'p2',
     name: 'Samsung 55" 4K Smart TV',
     verdict: 'REVIEW',
+    status: 'REVIEW_REQUIRED',
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+    assignedOfficerId: 'user_1',
     gemPrice: 64900,
     fmv: 51200,
     variance: 26.8,
@@ -96,11 +102,33 @@ export const MOCK_DB: Record<string, AuditData> = {
     id: 'p3',
     name: 'Steel Filing Cabinet 4 Drawer',
     verdict: 'COMPLIANT',
+    status: 'COMPLETED',
+    createdAt: new Date(Date.now() - 345600000).toISOString(),
+    assignedOfficerId: 'user_2',
     gemPrice: 12500,
     fmv: 13000,
     variance: -3.8,
     freshness: '1 hr ago',
     confidence: { overall: 91.4, identity: 90, specs: 95, brand: 85, warranty: 99 },
+    dataQuality: 'MEDIUM',
+    potentialSavings: 0,
+    riskScore: {
+      total: 5,
+      breakdown: { priceVariance: 0, specMismatch: 2, sellerRisk: 1, evidenceConfidence: 1, priceVolatility: 1 },
+      primaryDriver: 'Low price variance.'
+    },
+    seller: {
+      name: 'Steelworks India',
+      totalAudits: 50,
+      flagged: 1,
+      averagePremium: 0,
+      risk: 'LOW'
+    },
+    decision: {
+      status: 'APPROVED',
+      officerId: 'user_2',
+      timestamp: new Date(Date.now() - 300000000).toISOString()
+    },
     evidence: [
       '2 comparable listings found.',
       'GeM price is below the calculated Fair Market Value.'
@@ -123,11 +151,33 @@ export const MOCK_DB: Record<string, AuditData> = {
     id: 'p4',
     name: 'Cisco Catalyst 9200 48-port Switch',
     verdict: 'COMPLIANT',
+    status: 'CERTIFIED',
+    createdAt: new Date(Date.now() - 400000000).toISOString(),
+    assignedOfficerId: 'user_1',
     gemPrice: 125000,
     fmv: 128500,
     variance: -2.7,
     freshness: '15 min ago',
     confidence: { overall: 98.5, identity: 100, specs: 98, brand: 100, warranty: 90 },
+    dataQuality: 'HIGH',
+    potentialSavings: 0,
+    riskScore: {
+      total: 8,
+      breakdown: { priceVariance: 0, specMismatch: 0, sellerRisk: 4, evidenceConfidence: 2, priceVolatility: 2 },
+      primaryDriver: 'Pristine spec match.'
+    },
+    seller: {
+      name: 'Network Solutions Pvt',
+      totalAudits: 310,
+      flagged: 12,
+      averagePremium: 2.1,
+      risk: 'LOW'
+    },
+    decision: {
+      status: 'APPROVED',
+      officerId: 'user_1',
+      timestamp: new Date(Date.now() - 350000000).toISOString()
+    },
     evidence: [
       '3 identical listings found across B2B platforms.',
       'GeM price is 2.7% below the Fair Market Value.',
@@ -150,11 +200,31 @@ export const MOCK_DB: Record<string, AuditData> = {
     id: 'p5',
     name: 'Dell OptiPlex 7090 Tower',
     verdict: 'HIGH RISK',
+    status: 'REVIEW_REQUIRED',
+    createdAt: new Date(Date.now() - 1200000).toISOString(),
+    assignedOfficerId: 'user_1',
     gemPrice: 85000,
     fmv: 62000,
     variance: 37.1,
     freshness: 'Just now',
     confidence: { overall: 96.0, identity: 99, specs: 95, brand: 100, warranty: 85 },
+    dataQuality: 'HIGH',
+    potentialSavings: 23000,
+    riskScore: {
+      total: 82,
+      breakdown: { priceVariance: 65, specMismatch: 5, sellerRisk: 10, evidenceConfidence: 1, priceVolatility: 1 },
+      primaryDriver: '37.1% price premium.'
+    },
+    seller: {
+      name: 'Alpha IT Traders',
+      totalAudits: 60,
+      flagged: 14,
+      averagePremium: 12.5,
+      risk: 'HIGH'
+    },
+    decision: {
+      status: 'PENDING'
+    },
     evidence: [
       'Landed cost is 37.1% above Fair Market Value (Critical Flag).',
       'GeM listing includes outdated Intel 10th Gen processor.',
@@ -180,13 +250,27 @@ export const generateHash = () => {
   return Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
 };
 
+export const SYSTEM_RULES = {
+  autoFlagVariance: 15,
+  blockOrderVariance: 30,
+  confidenceThreshold: 85,
+  minSpecMatchScore: 90,
+  maxMarketplaces: 5
+};
+
 export const INITIAL_CERTIFICATES: Certificate[] = [
   {
-    id: 'CERT-2026-004',
-    date: new Date(Date.now() - 86400000).toLocaleString(),
-    product: 'Cisco Catalyst 9200 Switch',
+    id: 'GI-2026-001284',
+    auditId: 'p4',
+    productName: 'Cisco Catalyst 9200 Switch',
+    officerName: 'Ashish Mishra',
+    date: new Date(Date.now() - 350000000).toISOString(),
+    status: 'VALID',
     verdict: 'COMPLIANT',
-    hash: '8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4',
-    prevHash: '0000000000000000000000000000000000000000000000000000000000000000'
+    decisionStatus: 'APPROVED',
+    fmv: 128500,
+    gemPrice: 125000,
+    variance: -2.7,
+    hash: '8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4'
   }
 ];

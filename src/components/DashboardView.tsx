@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Scale, AlertTriangle, FileSignature, User, X, Shield, Link as LinkIcon, FileText, ArrowRight, PieChart, ShieldCheck, Download, Link2, Search, ChevronRight, Lock, Unlock, Menu, Copy, ExternalLink, CheckCircle } from 'lucide-react';
+import { Scale, AlertTriangle, FileSignature, User as UserIcon, X, Shield, Link as LinkIcon, FileText, ArrowRight, PieChart, ShieldCheck, Download, Link2, Search, ChevronRight, Lock, Unlock, Menu, Copy, ExternalLink, CheckCircle, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import PriceAuditsTab from './PriceAuditsTab';
+import AuditWorkspace from './AuditWorkspace';
 import OverviewTab from './OverviewTab';
+import IntelligenceTab from './IntelligenceTab';
 import TrustLedgerTab from './TrustLedgerTab';
 import ChatAssistant from './ChatAssistant';
-import { Certificate, AuditData } from '../types';
+import { Certificate, AuditData, User } from '../types';
 import { INITIAL_CERTIFICATES, generateHash, MOCK_DB } from '../data';
 import { Line } from 'react-chartjs-2';
 import html2canvas from 'html2canvas';
@@ -13,12 +14,18 @@ import { jsPDF } from 'jspdf';
 
 import { useNavigate } from 'react-router-dom';
 
-type TabType = 'overview' | 'audits' | 'anomalies' | 'certificates';
+import AuditQueueTab from './AuditQueueTab';
+import AdminPanelTab from './AdminPanelTab';
 
-export default function DashboardView({ onExit }: { onExit: () => void }) {
+type TabType = 'overview' | 'queue' | 'workspace' | 'anomalies' | 'certificates' | 'admin';
+
+export default function DashboardView({ onExit, currentUser }: { onExit: () => void, currentUser?: User | null }) {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabType>('audits');
+  const [activeTab, setActiveTab] = useState<TabType>('queue');
+  const [activeAuditId, setActiveAuditId] = useState<string | null>(null);
+
   const [certificates, setCertificates] = useState<Certificate[]>(INITIAL_CERTIFICATES);
+
   const [modalCert, setModalCert] = useState<Certificate | null>(null);
   const [isAirGapped, setIsAirGapped] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -39,10 +46,17 @@ export default function DashboardView({ onExit }: { onExit: () => void }) {
     const prevHash = certificates.length > 0 ? certificates[0].hash : '0000000000000000000000000000000000000000000000000000000000000000';
     const newCert: Certificate = {
       id: `CERT-${data.id.replace('p', '2026-00')}`,
-      date: new Date().toLocaleString(),
-      product: data.name,
-      verdict: data.verdict,
+      auditId: data.id,
+      productName: data.name,
+      officerName: currentUser?.name || 'R. Sharma',
+      date: new Date().toISOString(),
       hash: generateHash(),
+      status: 'VALID',
+      verdict: data.verdict,
+      decisionStatus: data.decision.status === 'APPROVED' || data.decision.status === 'REJECTED' || data.decision.status === 'JUSTIFIED' ? data.decision.status : 'APPROVED',
+      fmv: data.fmv,
+      gemPrice: data.gemPrice,
+      variance: data.variance,
       prevHash: prevHash
     };
     setCertificates([newCert, ...certificates]);
@@ -65,26 +79,35 @@ export default function DashboardView({ onExit }: { onExit: () => void }) {
         </div>
         
         <nav className="flex-1 px-4 py-2 space-y-1.5 overflow-y-auto">
-          <button onClick={() => { setActiveTab('audits'); setMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${activeTab === 'audits' ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}>
-            <Search className="w-5 h-5" /> Investigate
+          <button onClick={() => { setActiveTab('queue'); setMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${activeTab === 'queue' ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}>
+            <Search className="w-5 h-5" /> Audit Queue
+          </button>
+          <button onClick={() => { setActiveTab('workspace'); setMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${activeTab === 'workspace' ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}>
+            <ShieldCheck className="w-5 h-5" /> Case Investigation
           </button>
           <button onClick={() => { setActiveTab('overview'); setMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${activeTab === 'overview' ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}>
             <PieChart className="w-5 h-5" /> Overview
           </button>
           <button onClick={() => { setActiveTab('anomalies'); setMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center justify-between ${activeTab === 'anomalies' ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}>
-            <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5" /> Anomalies Center</div>
+            <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5" /> Intelligence Network</div>
             <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">3</span>
           </button>
           <button onClick={() => { setActiveTab('certificates'); setMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${activeTab === 'certificates' ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}>
             <FileSignature className="w-5 h-5" /> Trust Ledger
           </button>
+          
+          {currentUser?.role === 'ADMIN' && (
+            <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${activeTab === 'admin' ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}>
+              <Settings className="w-5 h-5" /> Admin Panel
+            </button>
+          )}
         </nav>
         
         <div className="p-6 border-t border-slate-100 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center shrink-0"><User className="w-5 h-5 text-slate-500" /></div>
+          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center shrink-0"><UserIcon className="w-5 h-5 text-slate-500" /></div>
           <div className="text-sm overflow-hidden">
-            <p className="font-bold text-slate-700 truncate">R. Sharma</p>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">Procurement Officer</p>
+            <p className="font-bold text-slate-700 truncate">{currentUser?.name || 'R. Sharma'}</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">{currentUser?.role?.replace('_', ' ') || 'PROCUREMENT OFFICER'}</p>
           </div>
         </div>
       </aside>
@@ -98,10 +121,12 @@ export default function DashboardView({ onExit }: { onExit: () => void }) {
             </button>
             <div>
               <h2 className="text-lg md:text-2xl font-bold text-slate-800 truncate">
-                {activeTab === 'audits' && 'Audit Investigation'}
+                {activeTab === 'workspace' && 'Audit Investigation'}
                 {activeTab === 'overview' && 'Executive Dashboard'}
-                {activeTab === 'anomalies' && 'Anomaly Center'}
+                {activeTab === 'anomalies' && 'Intelligence Network'}
                 {activeTab === 'certificates' && 'Cryptographic Trust Ledger'}
+                {activeTab === 'queue' && 'Audit Queue'}
+                {activeTab === 'admin' && 'Admin Control Panel'}
               </h2>
               <p className="hidden md:block text-sm text-slate-400 mt-1">GeM-Intel Price Intelligence Engine</p>
             </div>
@@ -132,95 +157,32 @@ export default function DashboardView({ onExit }: { onExit: () => void }) {
               className="w-full"
             >
               {activeTab === 'overview' && <OverviewTab />}
-              {activeTab === 'audits' && <PriceAuditsTab onIssueCertificate={handleIssueCertificate} isAirGapped={isAirGapped} onShowToast={showToast} />}
+              {activeTab === 'admin' && <AdminPanelTab />}
+              {activeTab === 'queue' && (
+                <AuditQueueTab 
+                  onSelectAudit={(auditId) => {
+                    setActiveAuditId(auditId);
+                    setActiveTab('workspace');
+                  }} 
+                />
+              )}
+              {activeTab === 'workspace' && activeAuditId && (
+                <AuditWorkspace 
+                  auditId={activeAuditId} 
+                  onBack={() => {
+                    setActiveAuditId(null);
+                    setActiveTab('queue');
+                  }}
+                  onShowToast={showToast} 
+                />
+              )}
 
               {activeTab === 'anomalies' && (
-                <div className="space-y-8 animate-fade-in-up">
-                  <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                    <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-                      <div>
-                        <h3 className="font-bold text-slate-800 text-lg">Active Pricing Anomalies</h3>
-                        <p className="text-sm text-slate-500">Listings flagged by the ARIMA forecasting engine.</p>
-                      </div>
-                      <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-200 flex items-center gap-1">
-                        <AlertTriangle className="w-3.5 h-3.5" /> {Object.values(MOCK_DB).filter(d => d.verdict === 'HIGH RISK' || d.verdict === 'REVIEW' || d.verdict === 'ANOMALY').length} Flags
-                      </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50/50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                          <tr>
-                            <th className="px-6 py-4">Date Detected</th>
-                            <th className="px-6 py-4">Product Name</th>
-                            <th className="px-6 py-4">Variance</th>
-                            <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {Object.values(MOCK_DB).filter(d => d.verdict === 'HIGH RISK' || d.verdict === 'REVIEW' || d.verdict === 'ANOMALY').map(item => (
-                            <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                              <td className="px-6 py-4 text-slate-600">{item.freshness}</td>
-                              <td className="px-6 py-4 font-medium text-slate-900">{item.name}</td>
-                              <td className="px-6 py-4 text-red-600 font-bold">+{item.variance}%</td>
-                              <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${item.verdict === 'HIGH RISK' ? 'bg-red-100 text-red-800 border-red-200' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>{item.verdict}</span></td>
-                              <td className="px-6 py-4">
-                                <button onClick={() => {
-                                  sessionStorage.setItem('gemIntel_scraped_id', item.id);
-                                  sessionStorage.setItem('gemIntel_autorun', 'true');
-                                  setActiveTab('audits');
-                                }} className="text-indigo-600 hover:text-indigo-800 font-medium text-sm flex items-center">
-                                  Investigate <ArrowRight className="w-3 h-3 ml-1" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                          {Object.values(MOCK_DB).filter(d => d.verdict === 'HIGH RISK' || d.verdict === 'REVIEW' || d.verdict === 'ANOMALY').length === 0 && (
-                            <tr>
-                              <td colSpan={5} className="px-6 py-8 text-center text-slate-500 font-medium">No active anomalies detected.</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
-                      <div className="flex items-center justify-between mb-4">
-                         <h3 className="font-bold text-slate-800">Seller Risk Profile</h3>
-                         <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Pattern Detected</span>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50">
-                           <h4 className="font-bold text-slate-900 text-lg mb-1">{Object.values(MOCK_DB).find(d => d.seller)?.seller?.name || 'ABC Technologies'}</h4>
-                           <p className="text-xs text-slate-500 font-medium mb-3">GeM Seller ID: SELLER-{Math.floor(Math.random() * 10000)}</p>
-                           <div className="grid grid-cols-2 gap-4 text-sm">
-                             <div>
-                               <p className="text-slate-500 text-xs font-bold uppercase">Flagged Listings</p>
-                               <p className="font-black text-slate-800 text-lg">{Object.values(MOCK_DB).find(d => d.seller)?.seller?.flagged || 14}</p>
-                             </div>
-                             <div>
-                               <p className="text-slate-500 text-xs font-bold uppercase">Avg Variance</p>
-                               <p className="font-black text-red-600 text-lg">+{Object.values(MOCK_DB).find(d => d.seller)?.seller?.averagePremium || 28.4}%</p>
-                             </div>
-                             <div>
-                               <p className="text-slate-500 text-xs font-bold uppercase">GeM Audits</p>
-                               <p className="font-black text-slate-800 text-lg">{Object.values(MOCK_DB).find(d => d.seller)?.seller?.totalAudits || 84}</p>
-                             </div>
-                             <div>
-                               <p className="text-slate-500 text-xs font-bold uppercase">Risk Level</p>
-                               <p className="font-black text-amber-600 text-lg">{Object.values(MOCK_DB).find(d => d.seller)?.seller?.risk || 'HIGH'}</p>
-                             </div>
-                           </div>
-                           <button onClick={() => showToast('Seller suspended pending investigation.', 'success')} className="mt-4 w-full bg-white border border-slate-300 text-slate-700 font-bold text-xs py-2 rounded-lg hover:bg-slate-50 transition-colors">
-                             Suspend Seller Account
-                           </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <IntelligenceTab 
+                  onInvestigate={(id) => {
+                    // Placeholder for now
+                  }} 
+                />
               )}
 
               {activeTab === 'certificates' && (
@@ -236,9 +198,8 @@ export default function DashboardView({ onExit }: { onExit: () => void }) {
           <div className="fixed inset-0 bg-slate-900/70 z-[100] flex items-center justify-center p-4 sm:p-6 backdrop-blur-sm animate-fade-in overflow-y-auto" onClick={(e) => {if(e.target === e.currentTarget) setModalCert(null);}}>
             <div id="certificate-modal-content" className="bg-white rounded-2xl w-full max-w-3xl my-8 flex flex-col shadow-2xl relative overflow-hidden">
               {(() => {
-                 const certAuditId = modalCert.id.replace('CERT-2026-00', 'p');
-                 const certAuditData = MOCK_DB[certAuditId] || Object.values(MOCK_DB)[1];
-                 const isHighRisk = certAuditData.verdict === 'HIGH RISK' || certAuditData.verdict === 'REVIEW';
+                 const certAuditData = MOCK_DB[modalCert.auditId] || Object.values(MOCK_DB).find(d => d.name === modalCert.productName) || Object.values(MOCK_DB)[1];
+                 const isHighRisk = certAuditData.verdict === 'HIGH RISK' || certAuditData.verdict === 'REVIEW' || certAuditData.verdict === 'ANOMALY';
                  const verdictColor = certAuditData.verdict === 'COMPLIANT' ? 'emerald' : certAuditData.verdict === 'REVIEW' ? 'amber' : 'red';
                  
                  return (
@@ -267,7 +228,7 @@ export default function DashboardView({ onExit }: { onExit: () => void }) {
                             </div>
                             <div>
                                <span className="block opacity-70 mb-1">Audit ID</span>
-                               <span className="text-slate-900 font-mono">AUDIT-2026-00{certAuditId.replace('p', '')}</span>
+                               <span className="text-slate-900 font-mono">AUDIT-2026-00{certAuditData.id.replace('p', '')}</span>
                             </div>
                             <div>
                                <span className="block opacity-70 mb-1">Issued</span>

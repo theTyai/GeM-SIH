@@ -12,6 +12,9 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@google-cloud/kms": "^6.1.0",
+    "@google-cloud/storage": "^8.1.0",
+    "@google-cloud/tasks": "^7.1.0",
     "@google/genai": "^2.21.0",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.1.14",
@@ -19,28 +22,40 @@
     "chart.js": "^4.5.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
+    "firebase": "^12.18.0",
+    "firebase-admin": "^14.3.0",
+    "google-auth-library": "^11.0.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "pg": "^8.23.0",
+    "playwright": "^1.63.0",
     "react": "^19.0.1",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.0.1",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.3",
     "remark-gfm": "^4.0.1",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^26.5.0",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
     "autoprefixer": "^10.4.21",
+    "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.2",
+    "supertest": "^7.2.2",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.23.13",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "vitest": "^5.0.0"
   }
 }

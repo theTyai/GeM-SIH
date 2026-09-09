@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import LandingView from './components/LandingView';
 import DashboardView from './components/DashboardView';
-import { MOCK_DB } from './data';
+import LoginView from './components/LoginView';
+import VerifyView from './components/VerifyView';
+import { MOCK_DB, SYSTEM_RULES } from './data';
+import { User } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, BrainCircuit } from 'lucide-react';
 
 export default function App() {
-  const [view, setView] = useState<'landing' | 'app'>('landing');
+  const [view, setView] = useState<'landing' | 'login' | 'app' | 'verify'>('landing');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState('Initializing AI Engine...');
 
@@ -26,6 +30,12 @@ export default function App() {
     const scrapedProduct = params.get('scrapedProduct');
     const scrapedPrice = params.get('scrapedPrice');
     const scrapedSpecs = params.get('specs');
+    const verifyHash = params.get('verify');
+
+    if (verifyHash) {
+      setView('verify');
+      return;
+    }
 
     if (scrapedProduct && scrapedPrice) {
       const rawPrice = scrapedPrice.split('.')[0].replace(/[^0-9]/g, '');
@@ -81,81 +91,83 @@ export default function App() {
       })
       .catch(err => {
         console.error("AI Error, falling back to mock", err);
-        // Fallback to local math
+        // Fallback to deterministic local math
         const fmv = Math.round(priceNum * 0.85); 
         const variance = Number(((priceNum - fmv) / fmv * 100).toFixed(1));
         const newId = 'scraped_' + Date.now();
         
-        const fallbackAudit = {
+        // Commercially realistic TCO math (assuming 18% GST)
+        const gemBase = Math.round(priceNum / 1.18);
+        const gemTax = priceNum - gemBase;
+        
+        const amzLanded = fmv;
+        const amzBase = Math.round(amzLanded / 1.18);
+        const amzTax = amzLanded - amzBase;
+
+        const flipLanded = fmv + Math.round(fmv * 0.047); 
+        const flipBase = Math.round((flipLanded - 126) / 1.18); // assuming 126 freight
+        const flipTax = flipLanded - 126 - flipBase;
+        const indLanded = fmv + Math.round(fmv * 0.025);
+        const indBase = Math.round(indLanded / 1.18);
+        const indTax = indLanded - indBase;
+        
+        // Spec Match Enforcement
+        const specScore = 90; // Defaulting to 90 for the mock
+        const isSpecMismatch = specScore < SYSTEM_RULES.minSpecMatchScore;
+        const varianceVerdict = variance > SYSTEM_RULES.autoFlagVariance ? 'HIGH RISK' : variance > 5 ? 'REVIEW' : 'COMPLIANT';
+        const finalVerdict = isSpecMismatch && varianceVerdict === 'COMPLIANT' ? 'REVIEW' : varianceVerdict;
+
+        const fallbackAudit: any = {
           id: newId,
           name: scrapedProduct,
-          verdict: 'REVIEW' as const,
+          verdict: finalVerdict,
+          status: 'REVIEW_REQUIRED',
+          createdAt: new Date().toISOString(),
+          assignedOfficerId: currentUser?.id || 'user_1',
           gemPrice: priceNum,
           fmv: fmv,
           variance: variance,
           freshness: 'Just now',
-          confidence: { overall: 89.4, identity: 95, specs: 90, brand: 92, warranty: 80 },
+          confidence: { overall: 89.4, identity: 95, specs: specScore, brand: 92, warranty: 80 },
+          dataQuality: 'MEDIUM',
+          isSimulated: true,
+          potentialSavings: priceNum - fmv > 0 ? priceNum - fmv : 0,
+          riskScore: {
+            total: finalVerdict === 'HIGH RISK' ? 75 : finalVerdict === 'REVIEW' ? 45 : 10,
+            breakdown: { priceVariance: variance > 0 ? Math.min(50, variance * 2) : 0, specMismatch: isSpecMismatch ? 20 : 10, sellerRisk: 10, evidenceConfidence: 5, priceVolatility: 0 },
+            primaryDriver: isSpecMismatch ? 'Semantic specification mismatch detected.' : 'Variance from market average'
+          },
+          seller: {
+            name: 'Unknown Seller',
+            totalAudits: 1,
+            flagged: 1,
+            averagePremium: variance > 0 ? variance : 0,
+            risk: variance > 15 ? 'HIGH' : variance > 5 ? 'MEDIUM' : 'LOW'
+          },
+          decision: {
+            status: 'PENDING'
+          },
           history: [fmv - 1500, fmv, fmv, priceNum, priceNum],
           evidence: [
             'Trigger: Detected via Browser Extension on GeM portal.',
             `Anomaly Alert: GeM price (₹${priceNum.toLocaleString()}) exceeds Fair Market Value (₹${fmv.toLocaleString()}) by ${variance}%.`,
-            'AI Matching: Cross-referenced via SBERT across Amazon, Flipkart, and IndiaMART.',
+            'Product Matching: Semantic + specification matching across Amazon, Flipkart, and IndiaMART.',
             'Compliance: Flags potential violation of GFR 2017 Rule 149 (Reasonability of Rates).'
           ],
-          specs: [
-            {
-              key: "Processor",
-              gem: "Intel Core i5",
-              platforms: [
-                  { name: 'Amazon', value: "Intel Core i5", isMismatch: false },
-                  { name: 'Flipkart', value: "Intel Core i5", isMismatch: false }
-              ]
-            },
-            {
-              key: "RAM",
-              gem: "16GB DDR4",
-              platforms: [
-                  { name: 'Amazon', value: "16GB DDR4", isMismatch: false },
-                  { name: 'Flipkart', value: "16GB DDR4", isMismatch: false }
-              ]
-            },
-            {
-              key: "Storage",
-              gem: "512GB NVMe",
-              platforms: [
-                  { name: 'Amazon', value: "512GB NVMe", isMismatch: false },
-                  { name: 'Flipkart', value: "512GB NVMe", isMismatch: false }
-              ]
-            },
-            {
-              key: "Screen Size",
-              gem: '15.6" FHD',
-              platforms: [
-                  { name: 'Amazon', value: '15.6" FHD', isMismatch: false },
-                  { name: 'Flipkart', value: '15.6" FHD', isMismatch: false }
-              ]
-            },
-            {
-              key: "OS",
-              gem: "Windows 11 Pro",
-              platforms: [
-                  { name: 'Amazon', value: "Windows 11 Pro", isMismatch: false },
-                  { name: 'Flipkart', value: "Windows 11 Home", isMismatch: true }
-              ]
-            },
-            {
-              key: "Warranty",
-              gem: "1 Year Onsite",
-              platforms: [
-                  { name: 'Amazon', value: "1 Year Onsite", isMismatch: false },
-                  { name: 'Flipkart', value: "1 Year Onsite", isMismatch: false }
-              ]
-            }
-          ],
+          specs: parsedSpecs.map((spec: any, idx: number) => ({
+            key: spec.key,
+            gem: spec.value,
+            platforms: [
+              { name: 'Amazon', value: spec.value, isMismatch: false },
+              // Create an artificial mismatch on the second item to demonstrate the feature
+              { name: 'Flipkart', value: idx === 1 ? '6 Months' : spec.value, isMismatch: idx === 1 }
+            ]
+          })),
           results: [
-            { plat: 'GeM', base: priceNum, tax: 0, freight: 0, warrantyCalc: 0, landed: priceNum, isTarget: true, conf: '-' },
-            { plat: 'Amazon', base: fmv - 2000, tax: 2000, freight: 0, warrantyCalc: 0, landed: fmv, isTarget: false, conf: '89.4%', freshness: 'Just now', url: 'https://amazon.in' },
-            { plat: 'Flipkart', base: fmv - 1500, tax: 1500, freight: 500, warrantyCalc: 0, landed: fmv + 500, isTarget: false, conf: '87.1%', freshness: '2 hrs ago', url: 'https://flipkart.com' }
+            { plat: 'GeM', base: gemBase, tax: gemTax, freight: 0, warrantyCalc: 0, landed: priceNum, isTarget: true, conf: '-' },
+            { plat: 'Amazon', base: amzBase, tax: amzTax, freight: 0, warrantyCalc: 0, landed: amzLanded, isTarget: false, conf: '94.2%', freshness: '17:21 IST · Today', url: 'https://amazon.in' },
+            { plat: 'Flipkart', base: flipBase, tax: flipTax, freight: 126, warrantyCalc: 0, landed: flipLanded, isTarget: false, conf: '87.1%', freshness: '17:19 IST · Today', url: 'https://flipkart.com' },
+            { plat: 'IndiaMART', base: indBase, tax: indTax, freight: 0, warrantyCalc: 0, landed: indLanded, isTarget: false, conf: '82.4%', freshness: '17:18 IST · Today', url: 'https://indiamart.com' }
           ]
         };
         MOCK_DB[newId] = fallbackAudit;
@@ -206,16 +218,28 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {view === 'landing' ? (
+      {view === 'verify' ? (
+        <VerifyView hash={new URLSearchParams(window.location.search).get('verify') || ''} onBack={() => { window.history.replaceState({}, document.title, "/"); setView('landing'); }} />
+      ) : view === 'landing' ? (
         <LandingView onLaunch={() => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
-          setView('app');
+          if (currentUser) {
+            setView('app');
+          } else {
+            setView('login');
+          }
+        }} />
+      ) : view === 'login' ? (
+        <LoginView onLogin={(user) => {
+           setCurrentUser(user);
+           setView('app');
         }} />
       ) : (
         <DashboardView onExit={() => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
+          setCurrentUser(null);
           setView('landing');
-        }} />
+        }} currentUser={currentUser} />
       )}
     </div>
   );

@@ -5,6 +5,9 @@ import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import apiRoutes from './server/routes/api.routes';
+import analyticsRoutes from './server/routes/analytics.routes';
+import publicRoutes from './server/routes/public.routes';
+import internalRoutes from './server/routes/internal.routes';
 
 dotenv.config();
 
@@ -24,6 +27,12 @@ async function startServer() {
 
   // Mount modular API routes
   app.use('/api', apiRoutes);
+  app.use('/api', analyticsRoutes);
+  app.use('/api', publicRoutes);
+  
+  // Mount internal worker routes
+  // (These have their own authentication middleware requiring Cloud Tasks or internal signatures)
+  app.use('/api/internal', internalRoutes);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
