@@ -1,0 +1,6 @@
+{
+  "name": "GeM-Intel Price Audit",
+  "description": "Advanced Price Intelligence & Procurement Audit Engine for GeM compliance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

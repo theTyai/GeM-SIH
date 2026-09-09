@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GeM-Intel</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <img src="icon.png" width="24" />
+    <strong>GeM-Intel Assistant</strong>
+  </div>
+  
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Scanning page for product...</p>
+  </div>
+  
+  <div id="error-state" style="display: none;">
+    <p>Please open this extension on a valid GeM product page.</p>
+  </div>
+
+  <div id="product-details" style="display: none;">
+    <img id="prod-img" src="" alt="Product" />
+    <div id="prod-title"></div>
+    <div class="price-row">
+      <span>GeM Price</span>
+      <div id="prod-price"></div>
+    </div>
+    <button id="run-audit-btn">RUN PRICE AUDIT</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
