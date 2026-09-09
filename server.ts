@@ -7,6 +7,7 @@ import fs from 'fs';
 import apiRoutes from './server/routes/api.routes';
 import analyticsRoutes from './server/routes/analytics.routes';
 import publicRoutes from './server/routes/public.routes';
+import extensionRoutes from './server/routes/extension.routes';
 import internalRoutes from './server/routes/internal.routes';
 
 dotenv.config();
@@ -29,6 +30,7 @@ async function startServer() {
   app.use('/api', apiRoutes);
   app.use('/api', analyticsRoutes);
   app.use('/api', publicRoutes);
+  app.use('/api', extensionRoutes);
   
   // Mount internal worker routes
   // (These have their own authentication middleware requiring Cloud Tasks or internal signatures)

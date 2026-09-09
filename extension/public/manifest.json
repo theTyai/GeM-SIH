@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "GeM-Intel Officer Assistant",
+  "version": "1.0.0",
+  "description": "Cryptographic evidence capture and deterministic risk intelligence for GeM procurements.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://mkp.gem.gov.in/*",
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://mkp.gem.gov.in/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}
