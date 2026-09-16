@@ -24,17 +24,26 @@ router.post('/v1/extension/analyze', async (req, res) => {
     }
 
     // Insert or update the target listing
-    const listingId = crypto.randomUUID();
-    await db.insert(gemListings).values({
-      id: listingId,
-      gemListingId: productId,
-      sellerId: '00000000-0000-0000-0000-000000000000', // Mock seller for demo
-      title,
-      category: 'Uncategorized',
-      listedPrice: price.toString(),
-      specJson: rawSpecs || {},
-      scrapedAt: new Date()
-    }).onConflictDoNothing();
+
+    const [existing] = await db.select().from(gemListings).where(eq(gemListings.gemListingId, productId));
+    let listingId;
+    if (existing) {
+      listingId = existing.id;
+    } else {
+      listingId = crypto.randomUUID();
+      await db.insert(gemListings).values({
+        id: listingId,
+        gemListingId: productId,
+        sellerId: '00000000-0000-0000-0000-000000000000', // Mock seller for demo
+        title,
+        category: 'Uncategorized',
+        listedPrice: price.toString(),
+        specJson: rawSpecs || {},
+        scrapedAt: new Date()
+      }).onConflictDoNothing();
+      const [doubleCheck] = await db.select().from(gemListings).where(eq(gemListings.gemListingId, productId));
+      if (doubleCheck) listingId = doubleCheck.id;
+    }
 
     // Find active rules
     const { ruleVersions } = await import('../../src/db/schema');

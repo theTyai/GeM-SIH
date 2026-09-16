@@ -1,6 +1,7 @@
 import * as esbuild from 'esbuild';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 const outdir = 'dist-extension';
 
@@ -12,6 +13,10 @@ if (!fs.existsSync(outdir)) {
 // Copy static files
 fs.copyFileSync('extension/public/manifest.json', path.join(outdir, 'manifest.json'));
 fs.copyFileSync('extension/public/index.html', path.join(outdir, 'index.html'));
+
+// Build Tailwind CSS
+console.log('Building Tailwind CSS...');
+execSync('npx @tailwindcss/cli -i extension/src/popup/style.css -o dist-extension/style.css --minify', { stdio: 'inherit' });
 
 // Build popup
 esbuild.build({
